@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
         Image3 img = render(scene);
         if (outputfile.compare("") == 0) {outputfile = scene.output_filename;}
         std::cout << "Done. Took " << tick(timer) << " seconds." << std::endl;
-        imwrite(outputfile, img);
+        imwrite("images/" + outputfile, img);
         std::cout << "Image written to " << outputfile << std::endl;
     }
 
