@@ -63,10 +63,7 @@ inline Real GTR2(Real n_dot_h, Real roughness) {
 }
 
 // anisotropic version of Distribution term, used in Disney Metal
-inline Real D_metal(Vector3 &hl, Real aniso, Real roughness) {
-    Real aspect = sqrt(1.0 - 0.9 * aniso);
-    Real alphax = max(1e-4, roughness*roughness/aspect);
-    Real alphay = max(1e-4, roughness*roughness*aspect);
+inline Real D_metal(Vector3 &hl, Real alphax, Real alphay) {
     Real t1, t2, t3;    // 3 terms in the square
     t1 = pow(hl.x/alphax, 2); t2 = pow(hl.y/alphay, 2); t3 = hl.z * hl.z;
     return Real(1.0) / (c_PI * alphax * alphay * pow((t1 + t2 + t3), 2));
@@ -87,6 +84,12 @@ inline Real smith_masking_gtr2(const Vector3 &v_local, Real roughness) {
     Real a2 = alpha * alpha;
     Vector3 v2 = v_local * v_local;
     Real Lambda = (-1 + sqrt(1 + (v2.x * a2 + v2.y * a2) / v2.z)) / 2;
+    return 1 / (1 + Lambda);
+}
+
+inline Real smith_masking_aniso(const Vector3 &v_local, Real alphax, Real alphay) {
+    Vector3 v2 = v_local * v_local;
+    Real Lambda = (-1 + sqrt(1 + (v2.x * alphax*alphax + v2.y * alphay*alphay) / v2.z)) / 2;
     return 1 / (1 + Lambda);
 }
 
@@ -121,4 +124,49 @@ inline Vector3 sample_visible_normals(const Vector3 &local_dir_in, Real alpha, c
 
     // Transforming the normal back to the ellipsoid configuration
     return normalize(Vector3{alpha * hemi_N.x, alpha * hemi_N.y, max(Real(0), hemi_N.z)});
+}
+
+// anisotropic version of sample VNDF
+inline Vector3 sample_visible_normals_aniso(const Vector3 &local_dir_in, Real alphax, Real alphay, const Vector2 &rnd_param) {
+    // The incoming direction is in the "ellipsodial configuration" in Heitz's paper
+    if (local_dir_in.z < 0) {
+        // Ensure the input is on top of the surface.
+        return -sample_visible_normals_aniso(-local_dir_in, alphax, alphay, rnd_param);
+    }
+
+    // Transform the incoming direction to the "hemisphere configuration".
+    Vector3 Vh = normalize(
+        Vector3{alphax * local_dir_in.x, alphay * local_dir_in.y, local_dir_in.z});
+
+    // orthonormal basis
+    Real lensq = Vh.x*Vh.x + Vh.y*Vh.y;
+    Vector3 T1 = lensq > 0 ? Vector3(-Vh.y, Vh.x, 0.0) / sqrt(lensq) : Vector3(1, 0, 0);
+    Vector3 T2 = cross(Vh, T1);
+    // Parameterization of the projected area of a hemisphere.
+    // First, sample a disk.
+    Real r = sqrt(rnd_param.x);
+    Real phi = 2 * c_PI * rnd_param.y;
+    Real t1 = r * cos(phi);
+    Real t2 = r * sin(phi);
+    // Vertically scale the position of a sample to account for the projection.
+    Real s = (1 + Vh.z) / 2;
+    t2 = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
+    // Point in the disk space
+    Vector3 Nh = t1*T1 + t2*T2 + sqrt(max(0.0, 1.0 - t1*t1 -t2*t2)) * Vh;
+
+    // Transforming the normal back to the ellipsoid configuration
+    return normalize(Vector3{alphax * Nh.x, alphay * Nh.y, max(Real(0), Nh.z)});
+}
+
+// return h in local shading frame
+inline Vector3 sample_clear_coat(Real alpha_sq, const Vector2 &rnd_param) {
+    Real cos_theta = sqrt((1.0 - pow(alpha_sq, 1.0-rnd_param[0])) / (1.0 - alpha_sq));
+    Real phi = c_TWOPI * rnd_param[1];
+    Real sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+
+    return Vector3(
+        sin_theta * cos(phi),
+        sin_theta * sin(phi),
+        cos_theta
+    );
 }

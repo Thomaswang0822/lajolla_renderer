@@ -4,6 +4,8 @@ inline Spectrum f_baseDiffuse(const DisneyDiffuse &bsdf, const PathVertex &verte
     Vector3 h = normalize(dir_in + dir_out);
     Real roughness = eval(
             bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
+    // Clamp roughness to avoid numerical issues.
+    roughness = std::clamp(roughness, Real(0.01), Real(1));
     Spectrum baseColor = eval(bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool);
     // intermediate values
     Real F_D90 = Real(0.5) + 2.0 * roughness * pow(dot(h, dir_out), 2);
@@ -19,6 +21,8 @@ inline Spectrum f_subsurface(const DisneyDiffuse &bsdf, const PathVertex &vertex
     Vector3 h = normalize(dir_in + dir_out);
     Real roughness = eval(
             bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
+    // Clamp roughness to avoid numerical issues.
+    roughness = std::clamp(roughness, Real(0.01), Real(1));
     Spectrum baseColor = eval(bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool);
     // intermediate values
     Real F_SS90 = roughness * pow(dot(h, dir_out), 2);
