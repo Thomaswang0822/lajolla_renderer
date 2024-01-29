@@ -40,6 +40,7 @@ Spectrum eval_op::operator()(const DisneyGlass &bsdf) const {
 
     // Compute F / D / G
     Real h_dot_in = dot(half_vector, dir_in);
+    assert(eta > 0);
     Real F = fresnel_dielectric(h_dot_in, eta);
     Real D = D_metal(hl, alphax, alphay);
     Real G = smith_masking_aniso(to_local(frame, dir_in), alphax, alphay) *
@@ -127,6 +128,7 @@ std::optional<BSDFSampleRecord>
     // If we are going into the surface, then we use normal eta
     // (internal/external), otherwise we use external/internal.
     Real eta = dot(vertex.geometric_normal, dir_in) > 0 ? bsdf.eta : 1 / bsdf.eta;
+    assert(eta > 0);
     // Flip the shading frame if it is inconsistent with the geometry normal
     Frame frame = vertex.shading_frame;
     if (dot(frame.n, dir_in) * dot(vertex.geometric_normal, dir_in) < 0) {

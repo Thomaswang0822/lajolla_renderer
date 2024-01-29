@@ -21,6 +21,9 @@ struct eval_op {
     Spectrum operator()(const DisneyClearcoat &bsdf) const;
     Spectrum operator()(const DisneySheen &bsdf) const;
     Spectrum operator()(const DisneyBSDF &bsdf) const;
+    // modified version of Disney Metal when putting 5 together
+    Spectrum operator()(const DisneyMetal &bsdf, 
+        Real specular, Real metallic, Real spTint, Real eta) const;
 
     const Vector3 &dir_in;
     const Vector3 &dir_out;

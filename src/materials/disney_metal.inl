@@ -35,6 +35,50 @@ Spectrum eval_op::operator()(const DisneyMetal &bsdf) const {
 
 }
 
+// modified version of Disney Metal when putting 5 together
+Spectrum eval_op::operator()(const DisneyMetal &bsdf, 
+        Real specular, Real metallic, Real spTint, Real eta) const {
+    if (dot(vertex.geometric_normal, dir_in) < 0 ||
+            dot(vertex.geometric_normal, dir_out) < 0) {
+        // No light below the surface
+        return make_zero_spectrum();
+    }
+    // Flip the shading frame if it is inconsistent with the geometry normal
+    Frame frame = vertex.shading_frame;
+    if (dot(frame.n, dir_in) < 0) {
+        frame = -frame;
+    }
+    
+    // variables
+    Vector3 h = normalize(dir_in + dir_out);
+    Vector3 hl = to_local(frame, h);
+    Real aniso = eval(bsdf.anisotropic, vertex.uv, vertex.uv_screen_size, texture_pool);
+    Real roughness = eval(bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
+    // Clamp roughness to avoid numerical issues.
+    roughness = std::clamp(roughness, Real(0.01), Real(1));
+    Real aspect = sqrt(1.0 - 0.9 * aniso);
+    Real alphax = max(1e-4, roughness*roughness/aspect);
+    Real alphay = max(1e-4, roughness*roughness*aspect);
+
+    // calculate F: DIFFERENT
+    Spectrum baseColor = eval(bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool);
+    Real lum = luminance(baseColor);
+    Spectrum C_tint = lum > 0 ? baseColor / lum : make_const_spectrum(1);
+    Spectrum Ks = (1.0 - spTint)  + spTint * C_tint;
+    // If we are going into the surface, then we use normal eta
+    // (internal/external), otherwise we use external/internal.
+    Real R0_eta = pow((eta - 1.0) / (eta + 1.0), 2);
+    Spectrum C = specular * R0_eta * (1.0 - metallic) * Ks + metallic * baseColor;
+    Spectrum F = C + (1.0 - C) * pow(1 - fabs(dot(h, dir_out)), 5);
+    // calculate D, can't use GTR2() since we have an anisotropic version
+    Real D = D_metal(hl, alphax, alphay);
+    // calculate G, also anisotropic version
+    Real G = smith_masking_aniso(to_local(frame, dir_in), alphax, alphay) *
+        smith_masking_aniso(to_local(frame, dir_out), alphax, alphay);
+
+    return Real(0.25) * F * D * G / dot(frame.n, dir_in);
+}
+
 Real pdf_sample_bsdf_op::operator()(const DisneyMetal &bsdf) const {
     if (dot(vertex.geometric_normal, dir_in) < 0 ||
             dot(vertex.geometric_normal, dir_out) < 0) {
