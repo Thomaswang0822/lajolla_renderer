@@ -102,7 +102,7 @@ Real pdf_sample_bsdf_op::operator()(const RoughPlastic &bsdf) const {
     // this importance samples smith_masking(cos_theta_in) * GTR2(cos_theta_h, roughness) * cos_theta_out
     Real G = smith_masking_gtr2(to_local(frame, dir_in), roughness);
     Real D = GTR2(n_dot_h, roughness);
-    // (4 * cos_theta_v) is the Jacobian of the reflectiokn
+    // (4 * cos_theta_v) is the Jacobian of the reflection
     spec_prob *= (G * D) / (4 * n_dot_in);
     // For the diffuse lobe, we importance sample cos_theta_out
     diff_prob *= n_dot_out / c_PI;

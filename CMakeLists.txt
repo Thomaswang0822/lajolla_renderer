@@ -7,14 +7,12 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_compile_options(-w)
-
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 if(MSVC)
-  add_compile_options(/Wall)
+  add_compile_options(/w)
 else()
-  add_compile_options(-Wall)
+  add_compile_options(-w)
 endif()
 
 find_package(Embree REQUIRED)

@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
         std::cout << "Parsing and constructing scene " << filename << "." << std::endl;
         Scene scene = parse_scene(filename, embree_device);
         std::cout << "Done. Took " << tick(timer) << " seconds." << std::endl;
-        std::cout << "Rendering..." << "using" << num_threads << "threads." << std::endl;
+        std::cout << "Rendering..." << "using " << num_threads << " threads." << std::endl;
         Image3 img = render(scene);
         std::cout << "Done. Took " << tick(timer) << " seconds." << std::endl;
         imwrite("images/" + outputfile, img);
