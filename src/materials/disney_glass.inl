@@ -36,7 +36,7 @@ Spectrum eval_op::operator()(const DisneyGlass &bsdf) const {
     Vector3 hl = to_local(frame, half_vector);
 
     // Compute baseColor
-    Vector3 baseColor = baseColor = eval(bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool);
+    Vector3 baseColor = eval(bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool);
 
     // Compute F / D / G
     Real h_dot_in = dot(half_vector, dir_in);
