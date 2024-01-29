@@ -79,10 +79,14 @@ std::optional<BSDFSampleRecord> sample_bsdf_op::operator()(const DisneyDiffuse &
         frame = -frame;
     }
     
+    Real roughness = eval(
+            bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
+    // Clamp roughness to avoid numerical issues.
+    roughness = std::clamp(roughness, Real(0.01), Real(1));
     // Disney Diffuse also use cos-weighted heimisphere sampling
     return BSDFSampleRecord{
         to_world(frame, sample_cos_hemisphere(rnd_param_uv)),
-        Real(0) /* eta */, Real(1) /* roughness */};
+        Real(0) /* eta */, roughness};
 }
 
 TextureSpectrum get_texture_op::operator()(const DisneyDiffuse &bsdf) const {
