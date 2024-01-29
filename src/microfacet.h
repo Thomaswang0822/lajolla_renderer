@@ -62,6 +62,16 @@ inline Real GTR2(Real n_dot_h, Real roughness) {
     return a2 / (c_PI * t*t);
 }
 
+// anisotropic version of Distribution term, used in Disney Metal
+inline Real D_metal(Vector3 &hl, Real aniso, Real roughness) {
+    Real aspect = sqrt(1.0 - 0.9 * aniso);
+    Real alphax = max(1e-4, roughness*roughness/aspect);
+    Real alphay = max(1e-4, roughness*roughness*aspect);
+    Real t1, t2, t3;    // 3 terms in the square
+    t1 = pow(hl.x/alphax, 2); t2 = pow(hl.y/alphay, 2); t3 = hl.z * hl.z;
+    return Real(1.0) / (c_PI * alphax * alphay * pow((t1 + t2 + t3), 2));
+}
+
 inline Real GGX(Real n_dot_h, Real roughness) {
     return GTR2(n_dot_h, roughness);
 }
