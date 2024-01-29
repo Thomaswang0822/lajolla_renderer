@@ -62,7 +62,7 @@ inline Real GTR2(Real n_dot_h, Real roughness) {
     return a2 / (c_PI * t*t);
 }
 
-// anisotropic version of Distribution term, used in Disney Metal
+// anisotropic version of Distribution term, used in Disney Metal and Glass
 inline Real D_metal(Vector3 &hl, Real alphax, Real alphay) {
     Real t1, t2, t3;    // 3 terms in the square
     t1 = pow(hl.x/alphax, 2); t2 = pow(hl.y/alphay, 2); t3 = hl.z * hl.z;
@@ -87,6 +87,7 @@ inline Real smith_masking_gtr2(const Vector3 &v_local, Real roughness) {
     return 1 / (1 + Lambda);
 }
 
+// anisotropic version of G term, used in Disney Metal and Glass
 inline Real smith_masking_aniso(const Vector3 &v_local, Real alphax, Real alphay) {
     Vector3 v2 = v_local * v_local;
     Real Lambda = (-1 + sqrt(1 + (v2.x * alphax*alphax + v2.y * alphay*alphay) / v2.z)) / 2;
