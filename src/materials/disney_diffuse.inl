@@ -2,6 +2,8 @@ inline Spectrum f_baseDiffuse(const DisneyDiffuse &bsdf, const PathVertex &verte
             const Vector3 &dir_in, const Vector3 &dir_out, Vector3 normal) {
     // variables
     Vector3 h = normalize(dir_in + dir_out);
+    Real n_dot_out = fabs(dot(normal, dir_out));
+    Real n_dot_in = fabs(dot(normal, dir_in));
     Real roughness = eval(
             bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
     // Clamp roughness to avoid numerical issues.
@@ -9,16 +11,18 @@ inline Spectrum f_baseDiffuse(const DisneyDiffuse &bsdf, const PathVertex &verte
     Spectrum baseColor = eval(bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool);
     // intermediate values
     Real F_D90 = Real(0.5) + 2.0 * roughness * pow(dot(h, dir_out), 2);
-    Real F_Din = Real(1.0) + (F_D90 - 1.0) * pow(1.0 - dot(normal, dir_in), 5);
-    Real F_Dout = Real(1.0) + (F_D90 - 1.0) * pow(1.0 - dot(normal, dir_out), 5);
+    Real F_Din = Real(1.0) + (F_D90 - 1.0) * pow(1.0 - n_dot_in, 5);
+    Real F_Dout = Real(1.0) + (F_D90 - 1.0) * pow(1.0 - n_dot_out, 5);
 
-    return baseColor / c_PI * F_Din * F_Dout * dot(normal, dir_out);
+    return baseColor / c_PI * F_Din * F_Dout * n_dot_out;
 }
 
 inline Spectrum f_subsurface(const DisneyDiffuse &bsdf, const PathVertex &vertex, const TexturePool &texture_pool,
             const Vector3 &dir_in, const Vector3 &dir_out, Vector3 normal) {
     // variables
     Vector3 h = normalize(dir_in + dir_out);
+    Real n_dot_out = fabs(dot(normal, dir_out));
+    Real n_dot_in = fabs(dot(normal, dir_in));
     Real roughness = eval(
             bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
     // Clamp roughness to avoid numerical issues.
@@ -26,11 +30,11 @@ inline Spectrum f_subsurface(const DisneyDiffuse &bsdf, const PathVertex &vertex
     Spectrum baseColor = eval(bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool);
     // intermediate values
     Real F_SS90 = roughness * pow(dot(h, dir_out), 2);
-    Real F_SSin = Real(1.0) + (F_SS90 - 1.0) * pow(1.0 - dot(normal, dir_in), 5);
-    Real F_SSout = Real(1.0) + (F_SS90 - 1.0) * pow(1.0 - dot(normal, dir_out), 5);
+    Real F_SSin = Real(1.0) + (F_SS90 - 1.0) * pow(1.0 - n_dot_in, 5);
+    Real F_SSout = Real(1.0) + (F_SS90 - 1.0) * pow(1.0 - n_dot_out, 5);
 
-    return Real(1.25) * baseColor / c_PI * dot(normal, dir_out) * (
-        F_SSin * F_SSout * (1.0 / (dot(normal, dir_in) + dot(normal, dir_out)) - 0.5) + 0.5
+    return Real(1.25) * baseColor / c_PI * n_dot_out * (
+        F_SSin * F_SSout * (1.0 / (n_dot_in + n_dot_out) - 0.5) + 0.5
     );
 }
 

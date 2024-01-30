@@ -139,10 +139,10 @@ inline Vector3 sample_visible_normals_aniso(const Vector3 &local_dir_in, Real al
     Vector3 Vh = normalize(
         Vector3{alphax * local_dir_in.x, alphay * local_dir_in.y, local_dir_in.z});
 
-    // orthonormal basis
-    Real lensq = Vh.x*Vh.x + Vh.y*Vh.y;
-    Vector3 T1 = lensq > 0 ? Vector3(-Vh.y, Vh.x, 0.0) / sqrt(lensq) : Vector3(1, 0, 0);
-    Vector3 T2 = cross(Vh, T1);
+    // // orthonormal basis
+    // Real lensq = Vh.x*Vh.x + Vh.y*Vh.y;
+    // Vector3 T1 = lensq > 0 ? Vector3(-Vh.y, Vh.x, 0.0) / sqrt(lensq) : Vector3(1, 0, 0);
+    // Vector3 T2 = cross(Vh, T1);
     // Parameterization of the projected area of a hemisphere.
     // First, sample a disk.
     Real r = sqrt(rnd_param.x);
@@ -153,7 +153,11 @@ inline Vector3 sample_visible_normals_aniso(const Vector3 &local_dir_in, Real al
     Real s = (1 + Vh.z) / 2;
     t2 = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
     // Point in the disk space
-    Vector3 Nh = t1*T1 + t2*T2 + sqrt(max(0.0, 1.0 - t1*t1 -t2*t2)) * Vh;
+    Vector3 disk_N{t1, t2, sqrt(max(Real(0), 1 - t1*t1 - t2*t2))};
+
+    // Reprojection onto hemisphere -- we get our sampled normal in hemisphere space.
+    Frame hemi_frame(Vh);
+    Vector3 Nh = to_world(hemi_frame, disk_N);
 
     // Transforming the normal back to the ellipsoid configuration
     return normalize(Vector3{alphax * Nh.x, alphay * Nh.y, max(Real(0), Nh.z)});

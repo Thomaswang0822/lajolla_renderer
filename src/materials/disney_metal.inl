@@ -31,7 +31,7 @@ Spectrum eval_op::operator()(const DisneyMetal &bsdf) const {
     Real G = smith_masking_aniso(to_local(frame, dir_in), alphax, alphay) *
         smith_masking_aniso(to_local(frame, dir_out), alphax, alphay);
 
-    return Real(0.25) * F * D * G / dot(frame.n, dir_in);
+    return Real(0.25) * F * D * G / fabs( dot(frame.n, dir_in) );
 
 }
 
@@ -94,12 +94,12 @@ Real pdf_sample_bsdf_op::operator()(const DisneyMetal &bsdf) const {
     // variables
     Vector3 h = normalize(dir_in + dir_out);
     Vector3 hl = to_local(frame, h);
-    Real n_dot_in = dot(frame.n, dir_in);
-    Real n_dot_out = dot(frame.n, dir_out);
-    Real n_dot_h = dot(frame.n, h);
-    if (n_dot_out <= 0 || n_dot_h <= 0) {
-        return 0;
-    }
+    Real n_dot_in = fabs( dot(frame.n, dir_in) );
+    Real n_dot_out = fabs( dot(frame.n, dir_out) );
+    Real n_dot_h = fabs( dot(frame.n, h) );
+    // if (n_dot_out <= 0 || n_dot_h <= 0) {
+    //     return 0;
+    // }
     Real roughness = eval(bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
     // Clamp roughness to avoid numerical issues.
     roughness = std::clamp(roughness, Real(0.01), Real(1));
