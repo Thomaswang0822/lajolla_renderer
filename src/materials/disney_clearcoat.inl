@@ -47,12 +47,10 @@ Real pdf_sample_bsdf_op::operator()(const DisneyClearcoat &bsdf) const {
     // variables
     Vector3 h = normalize(dir_in + dir_out);
     Vector3 hl = to_local(frame, h);
-    Real n_dot_in = dot(frame.n, dir_in);
-    Real n_dot_out = dot(frame.n, dir_out);
-    Real n_dot_h = dot(frame.n, h);
-    if (n_dot_out <= 0 || n_dot_h <= 0) {
-        return 0;
-    }
+    Real n_dot_in = fabs( dot(frame.n, dir_in) );
+    Real n_dot_out = fabs( dot(frame.n, dir_out) );
+    Real n_dot_h = fabs( dot(frame.n, h) );
+
     Real ccGloss = eval(bsdf.clearcoat_gloss, vertex.uv, vertex.uv_screen_size, texture_pool);
     Real alpha_sq = pow( (1.0 - ccGloss) * 0.1 + ccGloss * 1e-3, 2);
     // Clamp alpha_sq to avoid numerical issues in log(alpha_sq) of D
