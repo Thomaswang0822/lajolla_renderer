@@ -41,13 +41,13 @@ int main(int argc, char *argv[]) {
         Timer timer;
         tick(timer);
         std::cout << "Parsing and constructing scene " << filename << "." << std::endl;
-        Scene scene = parse_scene(filename, embree_device);
+        Scene* scene = parse_scene(filename, embree_device);
         std::cout << "Done. Took " << tick(timer) << " seconds." << std::endl;
         std::cout << "Rendering..." << "using " << num_threads << " threads." << std::endl;
-        Image3 img = render(scene);
+        Image3 img = render(*scene);
         std::cout << "Done. Took " << tick(timer) << " seconds." << std::endl;
         imwrite("images/" + outputfile, img);
-        std::cout << "Image written to " << "images/" + outputfile + ".exr" << std::endl;
+        std::cout << "Image written to " << "images/" + outputfile << std::endl;
     }
 
     parallel_cleanup();
