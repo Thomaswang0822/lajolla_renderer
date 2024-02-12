@@ -22,15 +22,14 @@ int main(int argc, char *argv[]) {
         if (std::string(argv[i]) == "-t") {
             num_threads = std::stoi(std::string(argv[++i]));
         } else if (std::string(argv[i]) == "-o") {
-            outputfile = std::string(argv[++i]);
+            outputfile = std::string(argv[++i]) + "_" + outputfile;
         } else {
             filenames.push_back(std::string(argv[i]));
             // extract filename
             std::filesystem::path p(filenames.back());
             std::cout << "filename: " << p.stem() << std::endl;
             if (outputfile.compare("") == 0)
-                outputfile = p.stem().string() + ".exr";
-
+                outputfile += p.stem().string() + ".exr";
         }
     }
 
