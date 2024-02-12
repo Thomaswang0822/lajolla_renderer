@@ -1,5 +1,16 @@
 #pragma once
 
+// Updates the current medium the ray lies in
+inline void update_medium(const PathVertex& vertex, const Ray& ray, int& m_id) {
+    if (vertex.interior_medium_id != vertex.exterior_medium_id) {
+        if (dot(ray.dir, vertex.geometric_normal) > 0) {
+            m_id = vertex.exterior_medium_id;
+        } else {
+            m_id = vertex.interior_medium_id;
+        }
+    }
+}
+
 // The simplest volumetric renderer: 
 // single absorption only homogeneous volume
 // only handle directly visible light sources
@@ -119,8 +130,115 @@ Spectrum vol_path_tracing_2(const Scene &scene,
 Spectrum vol_path_tracing_3(const Scene &scene,
                             int x, int y, /* pixel coordinates */
                             pcg32_state &rng) {
-    // Homework 2: implememt this!
-    return make_zero_spectrum();
+    // trace camera ray and intersect the scene
+    int w = scene.camera.width, h = scene.camera.height;
+    Vector2 screen_pos((x + next_pcg32_real<Real>(rng)) / w,
+                       (y + next_pcg32_real<Real>(rng)) / h);
+    Ray ray = sample_primary(scene.camera, screen_pos);
+    RayDifferential ray_diff = init_ray_differential(w, h);
+    int curr_medium_id = scene.camera.medium_id;
+
+    // other vars
+    Spectrum current_path_throughput = make_const_spectrum(1.0);
+    Spectrum radiance = make_zero_spectrum();
+    int bounces = 0;
+    bool scatter;
+    // a fake vertex hit in case vertex_ is nullptr
+    PathVertex vertex; std::optional<PathVertex> vertex_;
+    Spectrum transmittance;
+    Real trans_pdf;
+    Real t_hit, t;
+    Spectrum sigma_s, sigma_t;
+    PhaseFunction phaseF;
+    std::optional<Vector3> next_dir_; Vector3 next_dir;
+    Vector2 rnd_param; Real rr_prob = Real(1.0); // prob of not terminating
+
+    while (1) {
+        scatter = false;
+        vertex_ = intersect(scene, ray, ray_diff);
+        if (vertex_)
+            vertex = *vertex_;
+        // isect might not intersect a surface, but we might be in a volume
+        transmittance = make_const_spectrum(1.0);
+        trans_pdf = Real(1.0);
+        // Step 1: if in a medium, sample t and compute trans_pdf and transmittance
+        if (curr_medium_id > 0) {
+            // sample t s.t. p(t) ~ exp(-sigma_t * t)
+            t_hit = vertex_ ? distance(vertex_->position, ray.org) : infinity<Real>();
+            const Medium& md = scene.media[scene.camera.medium_id];
+            sigma_s = get_sigma_s(md, ray.org);
+            sigma_t = get_sigma_a(md, ray.org) + sigma_s;
+            phaseF = get_phase_function(md);
+            //  importance sample the transmittance exp(−σ_t * t)
+            t = -log(1.0 - next_pcg32_real<Real>(rng)) / sigma_t.x;
+            // update position: o + dir * t_hit -> o + dir * t
+            vertex.position = ray.org + t * ray.dir;
+            // compute transmittance and trans_pdf
+            if (t < t_hit) {
+                scatter = true;
+                trans_pdf = exp(-sigma_t.x * t) * sigma_t.x;
+                transmittance = exp(-sigma_t * t);
+            } else {
+                trans_pdf = exp(-sigma_t.x * t_hit);
+                transmittance = exp(-sigma_t * t_hit);
+            }
+        }
+
+        // Step 2: update throughtput
+        current_path_throughput *= (transmittance / trans_pdf);
+
+        // Step 3: no scatter (reach a surface), include possible emission
+        if (!scatter && vertex_ && is_light(scene.shapes[vertex_->shape_id])) { // t > t_hit
+            radiance += current_path_throughput * emission(vertex, -ray.dir, scene);
+        }
+
+        // Step 4: terminate if reach max_depth if not Russian-Roulette
+        if (bounces == scene.options.max_depth - 1 && scene.options.max_depth != -1)
+            break;
+
+        // Step 5: no scatter and hit -> if index-matching interface, skip through it
+        if (!scatter && vertex_) {
+            if (vertex_->material_id == -1) {
+                update_medium(vertex, ray, curr_medium_id);
+                bounces++;
+                continue;
+            }
+        }
+
+        // Step 6: scatter, update path throughput
+        if (scatter) {
+            rnd_param.x = next_pcg32_real<Real>(rng);
+            rnd_param.y = next_pcg32_real<Real>(rng);
+            next_dir_ = sample_phase_function(phaseF, -ray.dir, rnd_param);
+            // what to do if sample_phase failed? Looks like it won't
+            if (!next_dir_) {break;}
+            next_dir = *next_dir_ ;
+            current_path_throughput *= sigma_s * (
+                eval(phaseF, -ray.dir, next_dir) /
+                pdf_sample_phase(phaseF, -ray.dir, next_dir)
+            );
+            // update ray
+            ray = {vertex.position, next_dir, get_intersection_epsilon(scene), infinity<Real>()};
+        } else {
+            // Hit a surface -- don’t need to deal with this yet
+            break;
+        }
+
+        // Step 7: Russian-Roulette
+        rr_prob = Real(1.0);
+        if (bounces > scene.options.rr_depth) {
+            rr_prob = min(current_path_throughput.x, 0.95);
+            if (next_pcg32_real<Real>(rng) > rr_prob) {
+                break;
+            } else {
+                current_path_throughput /= rr_prob;
+            }
+        }
+        
+        bounces++;
+    }
+
+    return radiance;
 }
 
 // The fourth volumetric renderer: 
