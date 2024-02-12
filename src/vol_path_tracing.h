@@ -156,14 +156,17 @@ Spectrum vol_path_tracing_3(const Scene &scene,
     while (1) {
         scatter = false;
         vertex_ = intersect(scene, ray, ray_diff);
-        if (vertex_)
+        if (vertex_) {
             vertex = *vertex_;
+        } else {
+            vertex = PathVertex();
+        }
         // isect might not intersect a surface, but we might be in a volume
         transmittance = make_const_spectrum(1.0);
         trans_pdf = Real(1.0);
         // Step 1: if in a medium, sample t and compute trans_pdf and transmittance
-        if (curr_medium_id > 0) {
-            // sample t s.t. p(t) ~ exp(-sigma_t * t)
+        if (curr_medium_id >= 0) {
+            // if not hit and id > 0, scatter = true; !scatter -> must have a hit
             t_hit = vertex_ ? distance(vertex_->position, ray.org) : infinity<Real>();
             const Medium& md = scene.media[scene.camera.medium_id];
             sigma_s = get_sigma_s(md, ray.org);
@@ -171,11 +174,12 @@ Spectrum vol_path_tracing_3(const Scene &scene,
             phaseF = get_phase_function(md);
             //  importance sample the transmittance exp(−σ_t * t)
             t = -log(1.0 - next_pcg32_real<Real>(rng)) / sigma_t.x;
-            // update position: o + dir * t_hit -> o + dir * t
-            vertex.position = ray.org + t * ray.dir;
             // compute transmittance and trans_pdf
             if (t < t_hit) {
                 scatter = true;
+                // when vertex is fake, update position: o + dir * t_hit -> o + dir * t
+                vertex.position = ray.org + t * ray.dir;
+                // but we update sigma s and t later
                 trans_pdf = exp(-sigma_t.x * t) * sigma_t.x;
                 transmittance = exp(-sigma_t * t);
             } else {
@@ -199,6 +203,10 @@ Spectrum vol_path_tracing_3(const Scene &scene,
         // Step 5: no scatter and hit -> if index-matching interface, skip through it
         if (!scatter && vertex_) {
             if (vertex_->material_id == -1) {
+                // update ray, same dir, before update medium
+                // std::cout << ray.org << ray.dir << ray.tnear << ray.tfar;
+                // ray = {vertex.position, ray.dir, get_intersection_epsilon(scene), infinity<Real>()};
+                // std::cout << ray.org << ray.dir << ray.tnear << ray.tfar;
                 update_medium(vertex, ray, curr_medium_id);
                 bounces++;
                 continue;
@@ -207,6 +215,11 @@ Spectrum vol_path_tracing_3(const Scene &scene,
 
         // Step 6: scatter, update path throughput
         if (scatter) {
+            // updated vertex.position, thus update sigma
+            const Medium& md = scene.media[scene.camera.medium_id];
+            sigma_s = get_sigma_s(md, vertex.position);
+            sigma_t = get_sigma_a(md, vertex.position) + sigma_s;
+
             rnd_param.x = next_pcg32_real<Real>(rng);
             rnd_param.y = next_pcg32_real<Real>(rng);
             next_dir_ = sample_phase_function(phaseF, -ray.dir, rnd_param);
@@ -226,8 +239,8 @@ Spectrum vol_path_tracing_3(const Scene &scene,
 
         // Step 7: Russian-Roulette
         rr_prob = Real(1.0);
-        if (bounces > scene.options.rr_depth) {
-            rr_prob = min(current_path_throughput.x, 0.95);
+        if (bounces >= scene.options.rr_depth) {
+            rr_prob = min(max(current_path_throughput), 0.95);
             if (next_pcg32_real<Real>(rng) > rr_prob) {
                 break;
             } else {
