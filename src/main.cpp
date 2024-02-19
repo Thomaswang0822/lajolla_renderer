@@ -17,12 +17,13 @@ int main(int argc, char *argv[]) {
 
     int num_threads = std::thread::hardware_concurrency();
     std::string outputfile = "";
+    std::string prefix = "";
     std::vector<std::string> filenames;
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "-t") {
             num_threads = std::stoi(std::string(argv[++i]));
         } else if (std::string(argv[i]) == "-o") {
-            outputfile = std::string(argv[++i]) + "_" + outputfile;
+            prefix = std::string(argv[++i]) + "_";
         } else {
             filenames.push_back(std::string(argv[i]));
             // extract filename
@@ -45,6 +46,9 @@ int main(int argc, char *argv[]) {
         std::cout << "Rendering..." << "using " << num_threads << " threads." << std::endl;
         Image3 img = render(*scene);
         std::cout << "Done. Took " << tick(timer) << " seconds." << std::endl;
+        // write file
+        std::filesystem::path p(filename);
+        outputfile = prefix + p.stem().string() + ".exr";
         imwrite("images/" + outputfile, img);
         std::cout << "Image written to " << "images/" + outputfile << std::endl;
     }
