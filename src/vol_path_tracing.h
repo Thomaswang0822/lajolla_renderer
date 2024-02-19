@@ -569,6 +569,7 @@ Spectrum vol_path_tracing_5(const Scene &scene,
     Vector3 nee_p_cache; // the last position p that can issue a nee
     bool never_scatter = true;
     int light_id;
+    int max_depth = scene.options.max_depth;
 
     while (1) {
         // std::cout << "x, y, bounces:" << x << "\t" << y << "\t" << bounces << std::ends;
@@ -600,9 +601,6 @@ Spectrum vol_path_tracing_5(const Scene &scene,
                 trans_pdf = exp(-sigma_t.x * t) * sigma_t.x;
                 transmittance = exp(-sigma_t * t);
             } else {
-                // AND medium id!
-                vertex.exterior_medium_id = vertex_? vertex_->exterior_medium_id : curr_medium_id;
-                vertex.interior_medium_id = vertex_? vertex_->interior_medium_id : curr_medium_id;
                 trans_pdf = exp(-sigma_t.x * t_hit);
                 transmittance = exp(-sigma_t * t_hit);
             }
@@ -666,8 +664,9 @@ Spectrum vol_path_tracing_5(const Scene &scene,
         nee_p_cache = vertex.position;  // for later loop use
 
         // New Step 6B: nee sampling; if (scatter) is inside nee()
-        if (vertex_)
-            vertex = *vertex_;
+        /* CANNOT use *vertex_, because 
+        1) it can be null 
+        2) nee uses scatter point = vertex.position !=(may) vertex_->position */
         radiance += current_path_throughput * next_event_est(scene, vertex, -ray.dir, curr_medium_id, bounces, rng, scatter);
 
         // Step 6: scatter, update path throughput
@@ -692,7 +691,6 @@ Spectrum vol_path_tracing_5(const Scene &scene,
                 dir_pdf
             );
         } else {
-            // std::cout << "step 6 else" << std::endl;
             assert(vertex_);
             // New Step 6C: BSDF sampling
             assert(vertex_->material_id >= 0 && vertex_->material_id < scene.materials.size());
