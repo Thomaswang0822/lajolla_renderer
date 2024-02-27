@@ -948,7 +948,7 @@ Spectrum vol_path_tracing(const Scene &scene,
     // useful vars
     Real wMIS; // MIS weight
     Real rr_prob = Real(1.0); // prob of not terminating
-    Real real_prob;  // sampling real or fake particle
+    Spectrum real_prob;  // sampling real or fake particle, each channel
     Spectrum sigma_s, sigma_t, sigma_n, majorant;
     std::optional<Vector3> next_dir_; Vector3 next_dir;
     Vector2 rnd_param; 
@@ -1008,8 +1008,8 @@ Spectrum vol_path_tracing(const Scene &scene,
                     acc_p = ray.org + ray.dir * acc_t;
                     fill_sigma_data(md, acc_p, majorant, sigma_s, sigma_t, sigma_n);
                     // sample from real/fake particle events
-                    real_prob = (sigma_t / majorant)[ch012];
-                    if (next_pcg32_real<Real>(rng) < real_prob) {
+                    real_prob = sigma_t / majorant;
+                    if (next_pcg32_real<Real>(rng) < real_prob[ch012]) {
                         // real particle
                         scatter = true;
                         never_scatter = false;
