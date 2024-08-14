@@ -500,7 +500,8 @@ Spectrum vol_path_tracing_4(const Scene &scene,
             multi_trans_pdf = 1.0;
             nee_p_cache = vertex.position;  // for later loop use
             // New Step 6B: nee sampling
-            radiance += current_path_throughput * next_event_est_mono(scene, vertex, -ray.dir, curr_medium_id, bounces, rng);
+            Vector3 dir_in = -ray.dir;
+            radiance += current_path_throughput * next_event_est_mono(scene, vertex, dir_in, curr_medium_id, bounces, rng);
             // Phase function (dir) sampling
             // updated vertex.position, thus update sigma
             const Medium& md = scene.media[curr_medium_id];  // GET NEW MEDIUM!!!
@@ -679,7 +680,8 @@ Spectrum vol_path_tracing_5(const Scene &scene,
         /* CANNOT use *vertex_, because 
         1) it can be null 
         2) nee uses scatter point = vertex.position !=(may) vertex_->position */
-        radiance += current_path_throughput * next_event_est_mono(scene, vertex, -ray.dir, curr_medium_id, bounces, rng, scatter);
+        Vector3 dir_in = -ray.dir;
+        radiance += current_path_throughput * next_event_est_mono(scene, vertex, dir_in, curr_medium_id, bounces, rng, scatter);
 
         // Step 6: scatter, update path throughput
         rnd_param.x = next_pcg32_real<Real>(rng);
@@ -1107,7 +1109,8 @@ Spectrum vol_path_tracing(const Scene &scene,
         /* CANNOT use *vertex_, because 
         1) it can be null 
         2) nee uses scatter point = vertex.position !=(may) vertex_->position */
-        radiance += current_path_throughput * next_event_est_chromatic(scene, vertex, -ray.dir, curr_medium_id, bounces, rng, scatter);
+        Vector3 dir_in = -ray.dir;
+        radiance += current_path_throughput * next_event_est_chromatic(scene, vertex, dir_in, curr_medium_id, bounces, rng, scatter);
 
         // Step 6: scatter, update path throughput
         #pragma region step 6

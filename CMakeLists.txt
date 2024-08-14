@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 if(MSVC)
-  add_compile_options(/w)
+  add_compile_options(/W3)
 else()
   add_compile_options(-w)
 endif()
