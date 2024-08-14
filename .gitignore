@@ -43,6 +43,9 @@ build/
 # obj files in scenes directory
 !scenes/**/*.obj
 
-#IDE related
+# IDE related
 .vscode
 .vs
+
+# misc files
+.markdownlint.json

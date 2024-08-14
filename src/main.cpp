@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
             // extract filename
             std::filesystem::path p(filenames.back());
             std::cout << "filename: " << p.stem() << std::endl;
+            std::cout << "using " << num_threads << " threads" << std::endl;
             if (outputfile.compare("") == 0)
                 outputfile += p.stem().string() + ".exr";
         }

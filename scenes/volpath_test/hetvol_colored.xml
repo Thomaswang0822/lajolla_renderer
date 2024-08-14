@@ -54,10 +54,14 @@
 		</sampler>
 
 		<film type="hdrfilm">
-			<integer name="height" value="576"/>
-			<integer name="width" value="768"/>
+            <!-- <integer name="height" value="75"/>
+			<integer name="width" value="100"/> -->
             <!-- <integer name="height" value="300"/>
 			<integer name="width" value="400"/> -->
+			<!-- <integer name="height" value="576"/>
+			<integer name="width" value="768"/> -->
+            <integer name="height" value="1024"/>
+			<integer name="width" value="1366"/>
 
 			<rfilter type="gaussian"/>
 		</film>
